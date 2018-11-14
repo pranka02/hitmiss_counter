@@ -31,21 +31,29 @@ print(frame_rate)
 
 first_frame = None
 writer = None
-hit =0
+hits =0
+miss =0
 kernel_e = np.ones((10,10),np.uint8)
 kernel_d = np.ones((5,5),np.uint8)
+pxl_sum =0
+pxl =0
+frame_cnt =0
+dur_cnt =0
+
+
 while True:
 
-	ret,frame = video.read()
+	ret,frame_full = video.read()
 
-	if frame is None:
+	if frame_full is None:
 		break
-	frame = frame[230:500,450:800]
-	# frame = frame[320:390,580:700]
-	# frame = imutils.resize(frame,width=500,height=500)
+
+	frame_cnt+=1
+	# frame = frame_full[230:490,550:720]
+	frame = frame_full[230:430,450:800]
+	frame_full = imutils.resize(frame_full,width=700,height=700)
 	gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 	gray = cv2.GaussianBlur(gray, (25,25),0)
-	# edges = cv2.Canny(gray,20,255)
 	
 	if first_frame is None:
 		first_frame = gray
@@ -54,19 +62,36 @@ while True:
 	frame_diff = cv2.absdiff(first_frame,gray)
 	t,thresh = cv2.threshold(frame_diff,20,255,cv2.THRESH_BINARY)
 	# thresh = cv2.GaussianBlur(thresh, (25,25),0)
-	thresh = cv2.erode(thresh,kernel_e,iterations = 2)
-	thresh = cv2.dilate(thresh,kernel_e, iterations=2)
-	
+	thresh = cv2.erode(thresh,kernel_e,iterations = 1)
+	thresh = cv2.dilate(thresh,kernel_e, iterations=1)
+
 	thresh = cv2.Canny(thresh,20,255)
-	thresh = cv2.dilate(thresh,kernel_d, iterations=2)
-	# if len(thresh ==255) >200:
-	# 	hit+=1
-	cv2.imshow("Security Feed", frame)
+	thresh = cv2.dilate(thresh,kernel_d, iterations=1)
+
+	pxl_n = len(thresh[thresh==255])
+	if pxl_n >500:
+		pxl_sum +=pxl_n
+		pxl =1
+	elif pxl_n <1:
+		pxl =0
+
+	if pxl ==0: 
+		if pxl_sum >35000 and (frame_cnt-dur_cnt)>100:
+			hits+=1
+			dur_cnt = frame_cnt
+		elif pxl_sum <35000 and pxl_sum >15000 and  (frame_cnt-dur_cnt)>100:
+			miss +=1
+			dur_cnt =frame_cnt
+		pxl_sum =0
+
+
+	cv2.putText(frame_full, "Hits: {}".format(hits), (20,380), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
+	cv2.putText(frame_full, "Miss: {}".format(miss), (90,380), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
+	cv2.imshow("Security Feed", frame_full)
 	cv2.imshow("Thresh", thresh)
 	cv2.waitKey(1)& 0xFF
 
 
-print(hit)
 video.release()
 cv2.destroyAllWindows()
 
