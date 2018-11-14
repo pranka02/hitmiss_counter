@@ -32,7 +32,8 @@ print(frame_rate)
 first_frame = None
 writer = None
 hit =0
-kernel = np.ones((10,10),np.uint8)
+kernel_e = np.ones((10,10),np.uint8)
+kernel_d = np.ones((5,5),np.uint8)
 while True:
 
 	ret,frame = video.read()
@@ -51,12 +52,13 @@ while True:
 		continue
 
 	frame_diff = cv2.absdiff(first_frame,gray)
-	t,thresh = cv2.threshold(frame_diff,5,255,cv2.THRESH_BINARY)
-
-	thresh = cv2.erode(thresh,kernel,iterations = 2)
-	thresh = cv2.dilate(thresh,None, iterations=2)
+	t,thresh = cv2.threshold(frame_diff,20,255,cv2.THRESH_BINARY)
+	# thresh = cv2.GaussianBlur(thresh, (25,25),0)
+	thresh = cv2.erode(thresh,kernel_e,iterations = 2)
+	thresh = cv2.dilate(thresh,kernel_e, iterations=2)
+	
 	thresh = cv2.Canny(thresh,20,255)
-	# thresh = cv2.dilate(thresh,None, iterations=2)
+	thresh = cv2.dilate(thresh,kernel_d, iterations=2)
 	# if len(thresh ==255) >200:
 	# 	hit+=1
 	cv2.imshow("Security Feed", frame)
