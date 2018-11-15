@@ -6,8 +6,9 @@ import time
 import matplotlib.pyplot as plt
 
 template = cv2.imread('basket.jepg',0)
-# template = imutils.resize(template,width=200,height=200)
-# template = template[50:200,50:200]
+hits = 0
+miss =0
+
 path = 'SourceClip.mp4'
 video = cv2.VideoCapture(path)
 ret,full_frame = video.read()
@@ -15,13 +16,16 @@ ret,full_frame = video.read()
 frame = full_frame[230:430,450:800]
 gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 
+full_frame[0:200,1569 :1919,:] = cv2.cvtColor(gray,cv2.COLOR_GRAY2BGR)
+cv2.putText(full_frame, "Hit: {}".format(hits), (75,1050), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+cv2.putText(full_frame, "Miss: {}".format(miss), (275,1050), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+# cv2.putText(full_frame, "Miss: {}".format(miss), (275,1050), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+# cv2.imshow("gray",frame)
+# cv2.waitKey()
 
-cv2.imshow("gray",gray)
-cv2.waitKey()
+plt.imshow(full_frame)
+plt.show()
 
-# plt.imshow(full_frame)
-
-# plt.show()
 
 # img1 = template     #cv2.Canny(template,0,255)        # queryImage
 # img2 = gray				#cv2.Canny(gray,0,255)  # trainImage
