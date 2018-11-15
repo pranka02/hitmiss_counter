@@ -1,57 +1,54 @@
 import cv2
 import numpy as np
-import sys
 import imutils
+import skvideo
+import skvideo.io
 import matplotlib.pyplot as plt
 
-path = 'SourceClip.mp4'
-video = cv2.VideoCapture(path)
+src = 'SourceClip.mp4'
+video = cv2.VideoCapture(src)
+fps = video.get(cv2.CAP_PROP_FPS)
+print(float(fps))
 
 if not video.isOpened():
 	print("Video could not be opened")
 	sys.exit()
-num_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-frame_rate = video.get(cv2.CAP_PROP_FPS)
-print(num_frames)
-print(frame_rate)
-
-# ret,frame = video.read()
-# # frame = frame[230:500,450:800]
-# kernel = np.ones((5,5),np.uint8)
-# gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-
-# blank = np.zeros(gray.shape)
-
-# thresh = cv2.erode(gray,kernel,iterations = 2)
-# edges = cv2.Canny(thresh,100,200)
-
-# cv2.imshow("Frame",edges)
-# cv2.waitKey()
 
 
+# Video writing 
+
+# out_video = 'output.mp4'
+# writer = skvideo.io.FFmpegWriter(out_video)
+
+# fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+# out_video = 'output_vid.mp4'
+# ret,f_frame = video.read()
+# out_sh = f_frame.shape
+# out_write= cv2.VideoWriter(out_video, fourcc, fps, (out_sh[0],out_sh[1]))
+
+#Initializing variables for processing frames
 first_frame = None
-writer = None
 hits =0
 miss =0
-kernel_e = np.ones((10,10),np.uint8)
-kernel_d = np.ones((5,5),np.uint8)
+kernel_e = np.ones((10,10),np.uint8) # kernel for erosion
+kernel_d = np.ones((5,5),np.uint8)	# kernel for dilation
+kernel_b = np.ones((10,10),np.uint8) # kernel for dilation for basket
 pxl_sum =0
 pxl =0
 frame_cnt =0
 dur_cnt =0
+cnt =0
 
-
+# Looping through frames and detecting hit and miss
 while True:
 
-	ret,frame_full = video.read()
+	ret,full_frame = video.read()
 
-	if frame_full is None:
+	if full_frame is None:
 		break
 
 	frame_cnt+=1
-	# frame = frame_full[230:490,550:720]
-	frame = frame_full[230:430,450:800]
-	frame_full = imutils.resize(frame_full,width=700,height=700)
+	frame = full_frame[230:550,450:800]
 	gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
 	gray = cv2.GaussianBlur(gray, (25,25),0)
 	
@@ -61,78 +58,51 @@ while True:
 
 	frame_diff = cv2.absdiff(first_frame,gray)
 	t,thresh = cv2.threshold(frame_diff,20,255,cv2.THRESH_BINARY)
-	# thresh = cv2.GaussianBlur(thresh, (25,25),0)
+
 	thresh = cv2.erode(thresh,kernel_e,iterations = 1)
 	thresh = cv2.dilate(thresh,kernel_e, iterations=1)
 
 	thresh = cv2.Canny(thresh,20,255)
+	add = cv2.dilate(thresh[75:175,139:238], kernel_b,iterations =2)
 	thresh = cv2.dilate(thresh,kernel_d, iterations=1)
+	thresh[75:175,139:238] +=add
+
 
 	pxl_n = len(thresh[thresh==255])
 	if pxl_n >500:
 		pxl_sum +=pxl_n
+		cnt +=1
 		pxl =1
 	elif pxl_n <1:
 		pxl =0
+		cnt =0
 
 	if pxl ==0: 
-		if pxl_sum >35000 and (frame_cnt-dur_cnt)>100:
+		if pxl_sum >40000 and (frame_cnt-dur_cnt)>100:
 			hits+=1
 			dur_cnt = frame_cnt
-		elif pxl_sum <35000 and pxl_sum >15000 and  (frame_cnt-dur_cnt)>100:
+		elif pxl_sum <35000 and pxl_sum >20000 and  (frame_cnt-dur_cnt)>100:
 			miss +=1
 			dur_cnt =frame_cnt
+		# Debug help
+		# if pxl_sum !=0:    # debug help
+		# 	print(pxl_sum)
 		pxl_sum =0
 
+	full_frame[0:320,1569 :1919,:] = cv2.cvtColor(thresh,cv2.COLOR_GRAY2BGR)
+	cv2.putText(full_frame, "Hit = {}".format(hits), (75,1050), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+	cv2.putText(full_frame, "Miss = {}".format(miss), (275,1050), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+	cv2.putText(full_frame, "{}".format(cnt), (1340,1050), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255, 255, 255), 2)
+	# out_write.write(full_frame)
 
-	cv2.putText(frame_full, "Hits: {}".format(hits), (20,380), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
-	cv2.putText(frame_full, "Miss: {}".format(miss), (90,380), cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255), 1)
-	cv2.imshow("Security Feed", frame_full)
-	cv2.imshow("Thresh", thresh)
+	# Shows output frame bu frame
+	cv2.imshow("Full Frame", full_frame)        
 	cv2.waitKey(1)& 0xFF
 
-
 video.release()
+# out_write.release()
 cv2.destroyAllWindows()
 
 
-# frame = frame[230:500,450:800]
-# # imutils.resize(frame,width=600)
-# cv2.imshow('First_Frame',frame)
-# cv2.waitKey()
-# plt.imshow(frame)
-# plt.show()
-# 	if frame is None:
-# 		break
-# 	frame = imutils.resize(frame,width=600)
-# 	blurred = cv2.GaussianBlur(frame, (11,11),0)
-# 	hsv = cv2.cvtColor(blurred,cv2.COLOR_BGR2HSV)
-	# gray = cv2.cvtColor(first_frame,cv2.COLOR_BGR2GRAY)
-
-# circles = cv2.HoughCircles(gray,cv2.HOUGH_GRADIENT,1.2,100)
-
-# if circles is not None:
-# 	circles = np.round(circles[0,:]).astype("int")
-
-# 	for x,y,r in circles:
-# 		cv2.circle(gray,(x,y),r,(0,255,0),4)
-# ret,frame = video.read()
-
-# frame = imutils.resize(frame,width=700)
-# gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-# blurred = cv2.medianBlur(gray,5)
-# # hsv = cv2.cvtColor(blurred,cv2.COLOR_BGR2HSV)
-# circles = cv2.HoughCircles(gray,cv2.HOUGH_GRADIENT,1.2,200)
-
-# # if circles is not None:
-# 	# circles = np.round(circles[0,:]).astype("int")
-
-# # for (x,y,r) in circles:
-# # 	cv2.circle(blurred,(x,y),r,(0,255,0),4)
-# # # mask = cv2.inRange(hsv, Lower, Upper)
-# # # mask = cv2.erode(mask, None, iterations=2)
-# # # mask = cv2.dilate(mask, None, iterations=2)	
-# cv2.imshow('First_Frame',gray)
-# cv2.waitKey()
 
 
